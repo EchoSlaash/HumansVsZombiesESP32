@@ -24,17 +24,24 @@
  */
 
 #define PLAYER_AS "Human"
+//#define PLAYER_AS "Zombie"
 
 #ifdef PLAYER_AS == "Human"
 #define DEFAULT_GAME_PLAYER "Human"
 #define DEFAULT_GAME_PLAYER_PWD "HumanHuman"
 #else
+#ifdef PLAYER_AS "Zombie"
 #define DEFAULT_GAME_PLAYER "Zombie"
 #define DEFAULT_GAME_PLAYER_PWD "ZombieZombie"
+#else
+#define DEFAULT_GAME_PLAYER "Item"
+#define DEFAULT_GAME_PLAYER_PWD "ItemItem"
+#endif
 #endif
 
 #define DEFAULT_GAME_HUMAN "Human"
 #define DEFAULT_GAME_ZOMBIE "Zombie"
+#define DEFAULT_GAME_ITEM "Item"
 #define DEFAULT_GAME_SSID "Human"
 #define DEFAULT_GAME_PWD "HumanHuman"
 
@@ -87,6 +94,8 @@ public:
     int8_t HumansSignalPower[128];
     uint8_t ZombiesDetected = 0;
     int8_t ZombiesSignalPower[128];
+    uint8_t ItemsDetected = 0;
+    int8_t ItemsSignalPower[128];
   } detectedPlayersStruct;
 
   static HumanVsZombies &getInstance();
@@ -99,12 +108,17 @@ public:
   int16_t getIndexOfMaximumValue(int8_t *array, int size);
   int8_t lifePoints = 100;
   uint8_t humanDistance = 100;
-  uint8_t zombieDistace = 100;
+  uint8_t zombieDistance = 100;
+  uint8_t itemDistance = 100;
   uint16_t humanIndex = 0;
   uint16_t zombieIndex = 0;
+  uint16_t itemIndex = 0;
+  uint8_t timeOnItemRange = 0;
   bool infected = false;
+  void itemCare();
   int8_t updateLifePoints(uint8_t enemyDistance);
   int8_t careLifePoints(uint8_t friendlyHumanDistance);
+  int8_t mixedLifePoints(uint8_t enemyDistance, uint8_t friendlyHumanDistance);
   HumanVsZombies() {}
 #ifdef USE_IDF_METHOD
 

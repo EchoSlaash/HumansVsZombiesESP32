@@ -14,6 +14,7 @@ RgbColor blue(0, 0, colorSaturation);
 RgbColor purple(1, 0, 1);
 RgbColor white(colorSaturation);
 RgbColor black(0);
+RgbColor yellow(1, 1, 0);
 
 esp_err_t event_handler(void *ctx, system_event_t *event);
 xTimerHandle WiFiScannerTimerHandler;
@@ -199,7 +200,11 @@ bool HumanVsZombies::boot() {
 #ifdef PLAYER_AS == "Human"
     strip.SetPixelColor(i, green);
 #else
+#ifdef PLAYER_AS == "Zombie"
     strip.SetPixelColor(i, red);
+#else
+    strip.SetPixelColor(i, yellow);
+#endif
 #endif
   }
 
@@ -315,7 +320,7 @@ void gameManagerTask(void *parameter) {
       // String bssidHex =
       //     HumanVsZombies::getInstance().bssidConvertToDec(list[i].bssid);
       String SSID = (char *)list[i].ssid;
-      if ((SSID == DEFAULT_GAME_HUMAN) || (SSID == DEFAULT_GAME_ZOMBIE)) {
+      if ((SSID == DEFAULT_GAME_HUMAN) || (SSID == DEFAULT_GAME_ZOMBIE) || (SSID == DEFAULT_GAME_ITEM)) {
         /* Create a array of JsonObject */
         DynamicJsonBuffer jsonWifi;
         JsonObject &wifiRoot = json.createObject();
@@ -376,6 +381,15 @@ int HumanVsZombies::parseJsonWiFiScan(JsonArray &jsonArray) {
       detectedPlayers.ZombiesDetected++;
     }
   }
+
+  for (uint8_t i= 0; i< wifiSize; i++) {
+    String detectedPlayer = jsonArray[i]["ssid"].asString();
+    if (detectedPlayer == DEFAULT_GAME_ITEM) {
+      detectedPlayers.ItemsSignalPower[i] = jsonArray[i]["rssi"];
+      detectedPlayers.ItemsDetected++;
+      DEBUG_VAR("Item distance", detectedPlayers.ItemsSignalPower[detectedPlayers.ItemsDetected]);
+    }
+  }
   this->processDetectedPlayers(detectedPlayers);
 }
 
@@ -388,6 +402,9 @@ void HumanVsZombies::processDetectedPlayers(
   if (detectedPlayers.ZombiesDetected)
     this->zombieIndex = this->getIndexOfMaximumValue(
         detectedPlayers.ZombiesSignalPower, detectedPlayers.ZombiesDetected);
+  if (detectedPlayers.ItemsDetected)
+    this->itemIndex = this->getIndexOfMaximumValue(
+        detectedPlayers.ItemsSignalPower, detectedPlayers.ItemsDetected);
 
   // DEBUG_VAR("Detected Humans: ", detectedPlayers.HumansDetected);
   // DEBUG_VAR("Most near Human at index: ", humanIndex);
@@ -396,7 +413,8 @@ void HumanVsZombies::processDetectedPlayers(
   // DEBUG_VAR("Most near Zombie at index: ", zombieIndex);
 
   this->humanDistance = abs(detectedPlayers.HumansSignalPower[humanIndex]);
-  this->zombieDistace = abs(detectedPlayers.ZombiesSignalPower[zombieIndex]);
+  this->zombieDistance = abs(detectedPlayers.ZombiesSignalPower[zombieIndex]);
+  this->itemDistance = abs(detectedPlayers.ItemsSignalPower[itemIndex]);
 
   // if (detectedPlayers.HumansDetected) {
   //   /* */
@@ -410,7 +428,7 @@ void HumanVsZombies::processDetectedPlayers(
 
   /* Sometimes mapping bug, return directly 12, while the rrsi was 59, 69,
    * etc.. */
-  uint8_t zombieLedDistance = map(zombieDistace, 128, 0, 0, 13);
+  uint8_t zombieLedDistance = map(zombieDistance, 128, 0, 0, 13);
 
   if (detectedPlayers.ZombiesDetected >= 1) {
     uint8_t lifePointsLed = this->updateLifePoints(zombieLedDistance);
@@ -457,9 +475,8 @@ void HumanVsZombies::processDetectedPlayers(
     for (uint8_t i = 0; i < 12; i++) {
       strip.SetPixelColor(i, black);
     }
-
+#ifdef PLAYER_AS == "Human"   
     uint8_t lifePointsLed = this->careLifePoints(0);
-
     for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
       if (lifePoints > 0)
         strip.SetPixelColor(i, green);
@@ -467,15 +484,32 @@ void HumanVsZombies::processDetectedPlayers(
         strip.SetPixelColor(i, purple);
       /* */
       strip.Show();
+      }
+#endif
+    
+  } else {
+    if ((detectedPlayers.ZombiesDetected > 0) &&
+        (detectedPlayers.HumansDetected > 0)) {
+        uint8_t lifePointsLed = this->mixedLifePoints(this->zombieDistance, this->humanDistance);
+        if (lifePointsLed < 13) {
+          for (uint8_t i = 12 + (lifePointsLed); i<12; i--) {
+            if (lifePoints>0)
+              strip.SetPixelColor(i,green);
+            if (lifePoints<0)
+              strip.SetPixelColor(i, purple);
+            strip.Show();
+          }
+        }
     }
-  } else if ((detectedPlayers.ZombiesDetected > 0) &&
-             (detectedPlayers.HumansDetected > 0)) {
-  }
+
+  } 
   if (detectedPlayers.ZombiesDetected == 0) {
     for (uint8_t i = 0; i < 12; i++) {
       strip.SetPixelColor(i, black);
     }
     strip.Show();
+  }
+  if (detectedPlayers.ItemsDetected > 0) {
   }
 }
 
@@ -558,3 +592,71 @@ int8_t HumanVsZombies::updateLifePoints(uint8_t enemyDistance) {
   }
   return lifePointsLed;
 }
+
+int8_t HumanVsZombies::mixedLifePoints(uint8_t enemyDistance, uint8_t friendlyHumanDistance) {
+  for (uint8_t i = 12; i < 24; i++) {
+    strip.SetPixelColor(i, black);
+  }
+
+  uint8_t damageOutput = 0;
+  if (enemyDistance > 7) {
+    switch (enemyDistance) {
+    case 8:
+      damageOutput = 1;
+      break;
+    case 9:
+      damageOutput = 2;
+      break;
+    case 10:
+      damageOutput = 4;
+      break;
+    case 11:
+      damageOutput = 6;
+      break;
+    case 12:
+      damageOutput = 8;
+      break;
+    }
+  }
+
+uint8_t lifePointsToRestore = 0;
+if (friendlyHumanDistance > 7) {
+  switch (friendlyHumanDistance) {
+  case 8:
+    lifePointsToRestore = 1;
+    break;
+  case 9:
+    lifePointsToRestore = 2;
+    break;
+  case 10:
+    lifePointsToRestore = 4;
+    break;
+  case 11:
+    lifePointsToRestore = 6;
+    break;
+  case 12:
+    lifePointsToRestore = 8;
+    break;
+  }
+}
+
+uint8_t lifePointsLed = 0;
+  this->lifePoints = (lifePoints - damageOutput + lifePointsToRestore);
+  if (lifePoints < -100)
+    lifePoints = -100;
+  if (lifePoints > 100)
+    lifePoints = 100;
+  if (lifePoints > 0)
+    lifePointsLed = map(this->lifePoints, 0, 100, 0, 13);
+  if (lifePoints < 0) {
+    lifePointsLed = map(this->lifePoints, -100, 0, 13, 0);
+    this->infected = true;
+  if (lifePointsLed > 11) {
+      /* humans begin Zombie */
+      // DEBUG_LOG("Now you are Zombie!");
+    }
+  }
+  return lifePointsLed;
+}
+
+
