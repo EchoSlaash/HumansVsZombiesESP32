@@ -197,15 +197,12 @@ bool HumanVsZombies::boot() {
   }
 
   for (uint8_t i = 12; i < 24; i++) {
-#if PLAYER_AS == HUMAN
+if (PLAYER_AS == HUMAN)
     strip.SetPixelColor(i, green);
-#else
-#if PLAYER_AS == ZOMBIE
+else if (PLAYER_AS == ZOMBIE)
     strip.SetPixelColor(i, red);
-#else
+else 
     strip.SetPixelColor(i, yellow);
-#endif
-#endif
   }
 
   strip.Show();
@@ -389,9 +386,8 @@ int HumanVsZombies::parseJsonWiFiScan(JsonArray &jsonArray) {
       detectedPlayers.ItemsDetected++;
     }
   }
-  #if (PLAYER_AS == HUMAN || PLAYER_AS == ZOMBIE)
+  if (PLAYER_AS == HUMAN || PLAYER_AS == ZOMBIE)
   this->processDetectedPlayers(detectedPlayers);
-  #endif
 }
 
 void HumanVsZombies::processDetectedPlayers(
@@ -434,62 +430,68 @@ void HumanVsZombies::processDetectedPlayers(
   uint8_t itemLedDistance = map(itemDistance, 128, 0, 0, 13);
 
 /* Hardcore Fix to map bug */
-#if PLAYER_AS == HUMAN
-  if (zombieLedDistance < 13) {
-    for (uint8_t i = 0; i < zombieLedDistance; i++) {
-      strip.SetPixelColor(i, red);
-    }
-    strip.Show();
-  }
-#elif PLAYER_AS == ZOMBIE
-  if (humanLedDistance < 13) {
-    for (uint8_t i = 0; i < humanLedDistance; i++) {
-      strip.SetPixelColor(i, blue);
-    }
-    strip.Show();
-  }
-#endif
-  if ((detectedPlayers.ZombiesDetected > 0) &&
-      (detectedPlayers.HumansDetected > 0)) {
-#if PLAYER_AS == HUMAN
-    uint8_t lifePointsLed = this->mixedLifePoints(zombieLedDistance, humanLedDistance);
-    if (lifePointsLed < 13) {
-      for (uint8_t i = 12 + (lifePointsLed); i<12; i--) {
-        if (lifePoints>0)
-          strip.SetPixelColor(i,green);
-        if (lifePoints<0)
-          strip.SetPixelColor(i, purple);
-      }
-      strip.Show();
-    }
-#elif PLAYER_AS == ZOMBIE
-    uint8_t lifePointsLed = this->mixedLifePoints(0, zombieLedDistance);
-    if (lifePointsLed < 13) {
-      for (uint8_t i = 12 + (lifePointsLed); i<12; i--) {
+  if (PLAYER_AS == HUMAN) {
+    if (zombieLedDistance < 13) {
+      for (uint8_t i = 0; i < zombieLedDistance; i++) {
         strip.SetPixelColor(i, red);
       }
       strip.Show();
     }
-#endif
+  } else {
+    if (PLAYER_AS == ZOMBIE) {
+      if (humanLedDistance < 13) {
+        for (uint8_t i = 0; i < humanLedDistance; i++) {
+        strip.SetPixelColor(i, blue);
+      }
+      strip.Show();
+      } 
+    }
+  }
+
+  if ((detectedPlayers.ZombiesDetected > 0) &&
+      (detectedPlayers.HumansDetected > 0)) {
+    if (PLAYER_AS == HUMAN) {
+      uint8_t lifePointsLed = this->mixedLifePoints(zombieLedDistance, humanLedDistance);
+      if (lifePointsLed < 13) {
+        for (uint8_t i = 12 + (lifePointsLed); i<12; i--) {
+          if (lifePoints>0)
+            strip.SetPixelColor(i,green);
+          if (lifePoints<0)
+            strip.SetPixelColor(i, purple);
+        }
+        strip.Show();
+      }
+    } else {
+      if (PLAYER_AS == ZOMBIE) {
+        uint8_t lifePointsLed = this->mixedLifePoints(0, zombieLedDistance);
+        if (lifePointsLed < 13) {
+          for (uint8_t i = 12 + (lifePointsLed); i<12; i--) {
+            strip.SetPixelColor(i, red);
+          }
+        strip.Show();
+        }
+      }
+    }
   } else {
     if (detectedPlayers.ZombiesDetected >= 1) {
-#if PLAYER_AS == HUMAN
-      uint8_t lifePointsLed = this->updateLifePoints(zombieLedDistance);
-      for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
-        if (lifePoints > 0)
-          strip.SetPixelColor(i, green);
-        if (lifePoints < 0)
-          strip.SetPixelColor(i, purple);
+      if (PLAYER_AS == HUMAN) {
+        uint8_t lifePointsLed = this->updateLifePoints(zombieLedDistance);
+        for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
+          if (lifePoints > 0)
+            strip.SetPixelColor(i, green);
+          if (lifePoints < 0)
+            strip.SetPixelColor(i, purple);
+        }
+      } else {
+        if (PLAYER_AS == ZOMBIE) {
+          uint8_t lifePointsLed = this->careLifePoints(zombieLedDistance);
+          for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
+            strip.SetPixelColor(i, red);
+          }
+        }
       }
-#elif PLAYER_AS == ZOMBIE
-    uint8_t lifePointsLed = this->careLifePoints(zombieLedDistance);
-    for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
-      strip.SetPixelColor(i, red);
-    }
-#endif
-
-  } else {
-    if (detectedPlayers.HumansDetected > 0) {
+    } else {
+      if (detectedPlayers.HumansDetected > 0) {
       /* If there's no zombies restore LifePoints by friend */
       uint8_t lifePointsLed = this->careLifePoints(humanLedDistance);
       DEBUG_VAR("lifePointsLed: ", this->lifePoints);
@@ -505,7 +507,6 @@ void HumanVsZombies::processDetectedPlayers(
         }
       }
     }
-  }
   }
   // Check if no one is detected (old fix for weird led blinking glitch)
   /*if ((detectedPlayers.ZombiesDetected == 0) &&
@@ -523,21 +524,23 @@ void HumanVsZombies::processDetectedPlayers(
       strip.Show();
       }
 #endif */
-#if PLAYER_AS == HUMAN
-  if (detectedPlayers.ZombiesDetected == 0) {
-    for (uint8_t i = 0; i < 12; i++) {
-      strip.SetPixelColor(i, black);
+  if (PLAYER_AS == HUMAN) {
+    if (detectedPlayers.ZombiesDetected == 0) {
+      for (uint8_t i = 0; i < 12; i++) {
+        strip.SetPixelColor(i, black);
+      }
+      strip.Show();
     }
-    strip.Show();
-  }
-#elif PLAYER_AS == ZOMBIE
-  if (detectedPlayers.HumansDetected == 0) {
-    for (uint8_t i = 0; i < 12; i++) {
-      strip.SetPixelColor(i, black);
+  } else {
+    if (PLAYER_AS == ZOMBIE) {
+      if (detectedPlayers.HumansDetected == 0) {
+        for (uint8_t i = 0; i < 12; i++) {
+        strip.SetPixelColor(i, black);
+        }
+      strip.Show();
+      }
     }
-    strip.Show();
   }
-#endif
 
   if (detectedPlayers.ItemsDetected > 0) {
     this->itemCare(itemLedDistance);
@@ -549,6 +552,7 @@ void HumanVsZombies::processDetectedPlayers(
     //DEBUG_VAR("item is: ", item);
   }
   this->itemUse();
+  }
 }
 
 int8_t HumanVsZombies::careLifePoints(uint8_t allyDistance) {
@@ -626,6 +630,8 @@ int8_t HumanVsZombies::updateLifePoints(uint8_t enemyDistance) {
     if (lifePointsLed > 11) {
       /* humans begin Zombie */
       // DEBUG_LOG("Now you are Zombie!");
+      //#define DEFAULT_GAME_PLAYER "Zombie"
+      //#define DEFAULT_GAME_PLAYER "ZombieZombie"
     }
   }
   return lifePointsLed;
@@ -690,8 +696,6 @@ uint8_t lifePointsLed = 0;
     lifePointsLed = map(this->lifePoints, -100, 0, 13, 0);
     this->infected = true;
   if (lifePointsLed > 11) {
-      /* humans begin Zombie */
-      // DEBUG_LOG("Now you are Zombie!");
     }
   }
   return lifePointsLed;
@@ -724,16 +728,17 @@ void HumanVsZombies::itemCare(uint8_t distanceToItem) {
   if (itemLoad > 100) {
     itemLoad = 0;
     for (uint8_t itemNumber = 0; itemNumber < 4; itemNumber++)
-    if (itemStored[itemNumber] == 0) {
+    if (this->itemStored[itemNumber] == 0) {
       uint8_t item = 5;
       while((item > 4) || (item < 1)){
       item = esp_random();
       }
-      itemStored[itemNumber] = item;
+      this->itemStored[itemNumber] = item;
       itemNumber = 4;
     }
   }
 }
+
 void HumanVsZombies::itemUse() {
   bool itemButtonState;
 }

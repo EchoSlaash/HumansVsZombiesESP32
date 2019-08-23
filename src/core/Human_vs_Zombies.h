@@ -23,10 +23,11 @@
 /* Set the SSID and Password via project configuration, or can set directly here
  */
 
-#define HUMAN 1
-#define ZOMBIE 2
+#define HUMAN 0
+#define ZOMBIE 1
+#define ITEM 2
 
-#define PLAYER_AS 2
+#define PLAYER_AS 1
 
 #if PLAYER_AS == HUMAN
 #define DEFAULT_GAME_PLAYER "Human"
