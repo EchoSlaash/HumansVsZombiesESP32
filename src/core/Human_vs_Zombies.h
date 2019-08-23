@@ -26,7 +26,7 @@
 #define HUMAN 1
 #define ZOMBIE 2
 
-#define PLAYER_AS 1
+#define PLAYER_AS 2
 
 #if PLAYER_AS == HUMAN
 #define DEFAULT_GAME_PLAYER "Human"
@@ -121,8 +121,8 @@ public:
   bool infected = false;
   void itemCare(uint8_t distanceToItem);
   int8_t updateLifePoints(uint8_t enemyDistance);
-  int8_t careLifePoints(uint8_t friendlyHumanDistance);
-  int8_t mixedLifePoints(uint8_t enemyDistance, uint8_t friendlyHumanDistance);
+  int8_t careLifePoints(uint8_t allyDistance);
+  int8_t mixedLifePoints(uint8_t enemyDistance, uint8_t allyDistance);
   HumanVsZombies() {}
 #ifdef USE_IDF_METHOD
 
