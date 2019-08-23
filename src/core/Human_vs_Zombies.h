@@ -23,14 +23,16 @@
 /* Set the SSID and Password via project configuration, or can set directly here
  */
 
-#define PLAYER_AS "Human"
-//#define PLAYER_AS "Zombie"
+#define HUMAN 1
+#define ZOMBIE 2
 
-#ifdef PLAYER_AS == "Human"
+#define PLAYER_AS 1
+
+#if PLAYER_AS == HUMAN
 #define DEFAULT_GAME_PLAYER "Human"
 #define DEFAULT_GAME_PLAYER_PWD "HumanHuman"
 #else
-#ifdef PLAYER_AS "Zombie"
+#if PLAYER_AS == ZOMBIE
 #define DEFAULT_GAME_PLAYER "Zombie"
 #define DEFAULT_GAME_PLAYER_PWD "ZombieZombie"
 #else
@@ -105,6 +107,7 @@ public:
   bool wifiConfig();
   int parseJsonWiFiScan(JsonArray &jsonArray);
   void processDetectedPlayers(detectedPlayersStruct &detectedPlayers);
+  void itemUse();
   int16_t getIndexOfMaximumValue(int8_t *array, int size);
   int8_t lifePoints = 100;
   uint8_t humanDistance = 100;
@@ -113,9 +116,10 @@ public:
   uint16_t humanIndex = 0;
   uint16_t zombieIndex = 0;
   uint16_t itemIndex = 0;
-  uint8_t timeOnItemRange = 0;
+  uint8_t itemLoad = 0;
+  uint8_t itemStored[4] = {0, 0, 0,0};
   bool infected = false;
-  void itemCare();
+  void itemCare(uint8_t distanceToItem);
   int8_t updateLifePoints(uint8_t enemyDistance);
   int8_t careLifePoints(uint8_t friendlyHumanDistance);
   int8_t mixedLifePoints(uint8_t enemyDistance, uint8_t friendlyHumanDistance);

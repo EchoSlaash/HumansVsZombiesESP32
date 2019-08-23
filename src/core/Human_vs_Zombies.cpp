@@ -197,10 +197,10 @@ bool HumanVsZombies::boot() {
   }
 
   for (uint8_t i = 12; i < 24; i++) {
-#ifdef PLAYER_AS == "Human"
+#if PLAYER_AS == HUMAN
     strip.SetPixelColor(i, green);
 #else
-#ifdef PLAYER_AS == "Zombie"
+#if PLAYER_AS == ZOMBIE
     strip.SetPixelColor(i, red);
 #else
     strip.SetPixelColor(i, yellow);
@@ -387,7 +387,6 @@ int HumanVsZombies::parseJsonWiFiScan(JsonArray &jsonArray) {
     if (detectedPlayer == DEFAULT_GAME_ITEM) {
       detectedPlayers.ItemsSignalPower[i] = jsonArray[i]["rssi"];
       detectedPlayers.ItemsDetected++;
-      DEBUG_VAR("Item distance", detectedPlayers.ItemsSignalPower[detectedPlayers.ItemsDetected]);
     }
   }
   this->processDetectedPlayers(detectedPlayers);
@@ -429,12 +428,14 @@ void HumanVsZombies::processDetectedPlayers(
   /* Sometimes mapping bug, return directly 12, while the rrsi was 59, 69,
    * etc.. */
   uint8_t zombieLedDistance = map(zombieDistance, 128, 0, 0, 13);
+  uint8_t humanLedDistance = map(humanDistance, 128, 0, 0, 13);
+  uint8_t itemLedDistance = map(itemDistance, 128, 0, 0, 13);
 
   if (detectedPlayers.ZombiesDetected >= 1) {
     uint8_t lifePointsLed = this->updateLifePoints(zombieLedDistance);
 
     for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
-#ifdef PLAYER_AS == "Human"
+#if PLAYER_AS == HUMAN
       if (lifePoints > 0)
         strip.SetPixelColor(i, green);
       if (lifePoints < 0)
@@ -454,7 +455,7 @@ void HumanVsZombies::processDetectedPlayers(
   } else {
     if (detectedPlayers.HumansDetected > 0) {
       /* If there's no zombies restore LifePoints by friend */
-      uint8_t lifePointsLed = this->careLifePoints(this->humanDistance);
+      uint8_t lifePointsLed = this->careLifePoints(humanLedDistance);
       DEBUG_VAR("lifePointsLed: ", this->lifePoints);
       DEBUG_VAR("lifePointsLed: ", lifePointsLed);
       if (lifePointsLed < 13) {
@@ -475,7 +476,7 @@ void HumanVsZombies::processDetectedPlayers(
     for (uint8_t i = 0; i < 12; i++) {
       strip.SetPixelColor(i, black);
     }
-#ifdef PLAYER_AS == "Human"   
+#if PLAYER_AS == HUMAN   
     uint8_t lifePointsLed = this->careLifePoints(0);
     for (uint8_t i = 12 + (lifePointsLed); i > 12; i--) {
       if (lifePoints > 0)
@@ -510,7 +511,15 @@ void HumanVsZombies::processDetectedPlayers(
     strip.Show();
   }
   if (detectedPlayers.ItemsDetected > 0) {
+    this->itemCare(itemLedDistance);
+    DEBUG_VAR ("item1", itemStored[0]);
+    DEBUG_VAR ("item2", itemStored[1]);
+    DEBUG_VAR ("item3", itemStored[2]);
+    DEBUG_VAR ("item4", itemStored[3]);
+    
+    //DEBUG_VAR("item is: ", item);
   }
+  this->itemUse();
 }
 
 int8_t HumanVsZombies::careLifePoints(uint8_t friendlyHumanDistance) {
@@ -659,4 +668,43 @@ uint8_t lifePointsLed = 0;
   return lifePointsLed;
 }
 
+void HumanVsZombies::itemCare(uint8_t distanceToItem) {
+  uint8_t itemToLoad = 0;
+  if (distanceToItem> 7) {
+    switch (distanceToItem) {
+      case 8:
+        itemToLoad = 1;
+        break;
+      case 9:
+        itemToLoad = 2;
+        break;
+      case 10:
+        itemToLoad = 4;
+        break;
+      case 11:
+        itemToLoad = 6;
+        break;
+      case 12:
+        itemToLoad = 8;
+        break;
+    }
+  }
+  itemLoad += itemToLoad;
+  DEBUG_VAR("itemLoad:", itemLoad);
 
+  if (itemLoad > 100) {
+    itemLoad = 0;
+    for (uint8_t itemNumber = 0; itemNumber < 4; itemNumber++)
+    if (itemStored[itemNumber] == 0) {
+      uint8_t item = 5;
+      while((item > 4) || (item < 1)){
+      item = esp_random();
+      }
+      itemStored[itemNumber] = item;
+      itemNumber = 4;
+    }
+  }
+}
+void HumanVsZombies::itemUse() {
+  bool itemButtonState;
+}
